@@ -118,10 +118,12 @@ SIMPLE_JWT = {
 }
 
 # --- REAL SMTP EMAIL CONFIGURATION ---
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# --- REAL EMAIL SETTINGS ---
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'hritikrajsingh88@gmail.com' 
-EMAIL_HOST_PASSWORD = 'iznzrptfbxdiauza' 
-DEFAULT_FROM_EMAIL = 'Perseus Trader Admin <hritikrajsingh88@gmail.com>'
+
+# Yeh credentials automatically Render se fetch ho jayenge
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER') 
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
