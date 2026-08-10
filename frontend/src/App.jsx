@@ -15,7 +15,6 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 function App() {
   const [token, setToken] = useState('');
   const [authMode, setAuthMode] = useState('register'); 
-  const [otpCode, setOtpCode] = useState('');
   
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -100,31 +99,20 @@ function App() {
   const handleRegisterRequest = async (e) => {
     e.preventDefault();
     try {
-      await API.post('auth/register-step1/', { username, email, password });
-      setAuthMode('verify');
-      setMessage('Security OTP dispatched to your email.');
-      speakOptimus("Transmission sent. Enter your 6 digit security verification code to complete registration.");
-    } catch (err) {
-      setMessage(err.response?.data?.error || 'Registration failed.');
-      speakOptimus("Registration transmission failed. Try another identifier.");
-    }
-  };
-
-  const handleRegisterVerify = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await API.post('auth/register-step2/', { username, password, otp: otpCode });
+      const res = await API.post('auth/register/', { username, email, password });
+      
       localStorage.setItem('access_token', res.data.access);
       localStorage.setItem('username', res.data.username);
       setToken(res.data.access);
       setUsername(res.data.username);
-      setMessage('Account Activated.');
+      setMessage('Account Created Successfully.');
       speakOptimus("Account successfully initialized. Entering main terminal screen.");
+      
       fetchPortfolio();
       fetchTransactions();
     } catch (err) {
-      setMessage(err.response?.data?.error || 'OTP Verification failed.');
-      speakOptimus("Verification code invalid.");
+      setMessage(err.response?.data?.error || 'Registration failed.');
+      speakOptimus("Registration failed. Try another identifier.");
     }
   };
 
@@ -190,7 +178,6 @@ function App() {
     setUsername('');
     setPassword('');
     setEmail('');
-    setOtpCode('');
     setMessage('Disconnected successfully.');
     speakOptimus("Session terminated. Please register a new account to continue.");
   };
@@ -339,7 +326,7 @@ function App() {
           <div className="p-8 bg-[#121620]/95 backdrop-blur-[25px] border border-white/[0.08] rounded-3xl shadow-[0_25px_45px_rgba(0,0,0,0.9)] w-96 relative">
             <h2 className="text-2xl font-black text-center text-white tracking-wider mb-2">PERSEUS<span className="text-emerald-400">TRADER</span></h2>
             
-            {/* REGISTER SCREEN */}
+            {/* DIRECT REGISTER SCREEN (NO OTP) */}
             {authMode === 'register' && (
               <>
                 <p className="text-xs text-center text-slate-400 mb-6">Step 1: Create Institutional Account</p>
@@ -347,7 +334,7 @@ function App() {
                   <input type="email" name="blank_email_unique" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" data-lpignore="true" className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/[0.08] text-sm text-white focus:outline-none focus:border-emerald-500" required />
                   <input type="text" name="blank_user_unique" placeholder="Choose Username" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="off" data-lpignore="true" className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/[0.08] text-sm text-white focus:outline-none focus:border-emerald-500" required />
                   <input type="password" name="blank_pass_unique" placeholder="Choose Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" data-lpignore="true" className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/[0.08] text-sm text-white focus:outline-none focus:border-emerald-500" required />
-                  <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3 rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]">Send Email OTP</button>
+                  <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3 rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]">Create Account & Unlock</button>
                 </form>
                 <p 
                   className="mt-6 text-xs text-center cursor-pointer text-slate-400 hover:text-emerald-400" 
@@ -358,26 +345,6 @@ function App() {
                 >
                   Already registered? Sign In instead
                 </p>
-              </>
-            )}
-
-            {/* OTP VERIFICATION */}
-            {authMode === 'verify' && (
-              <>
-                <p className="text-xs text-center text-slate-400 mb-6">Verify OTP sent to your email</p>
-                <form onSubmit={handleRegisterVerify} className="space-y-4" autoComplete="off">
-                  <input type="text" placeholder="Enter 6-Digit OTP" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} className="w-full px-4 py-3 text-center tracking-widest font-mono text-xl rounded-xl bg-black/40 border border-emerald-500 text-emerald-400 focus:outline-none" maxLength="6" required />
-                  <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3 rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]">Verify & Unlock Terminal</button>
-                  <p 
-                    className="text-center text-xs text-slate-500 cursor-pointer hover:text-slate-300" 
-                    onClick={() => {
-                      setAuthMode('register');
-                      speakOptimus("Returning to registration screen.");
-                    }}
-                  >
-                    ← Back to Registration
-                  </p>
-                </form>
               </>
             )}
 
@@ -614,124 +581,124 @@ function App() {
               ) : <p className="text-slate-500">Sign in to view your personalized portfolio and transaction history.</p>}
             </div>
           )}
-{activeTab === 'profile' && (
-          <div className="flex-1 p-8 lg:p-12 overflow-y-auto z-10 relative custom-scrollbar">
-            
-            <div className="max-w-7xl mx-auto space-y-8">
-              <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
-                <div>
-                  <h2 className="text-3xl font-black text-white tracking-wide">System <span className="text-emerald-400">Identity</span></h2>
-                  <p className="text-xs text-slate-400 font-mono mt-1">SECURE INSTITUTIONAL TELEMETRY & CLEARANCE</p>
-                </div>
-                <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-mono text-emerald-400 font-bold">
-                  STATUS: OPTIMAL
-                </div>
-              </div>
+          {activeTab === 'profile' && (
+            <div className="flex-1 p-8 lg:p-12 overflow-y-auto z-10 relative custom-scrollbar">
               
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                {/* Left Col: ID & Security */}
-                <div className="space-y-6">
-                  <div className="bg-[#121620]/40 backdrop-blur-[20px] border border-white/[0.08] shadow-[0_25px_45px_rgba(0,0,0,0.8)] p-8 rounded-[2rem] relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                    
-                    <div className="flex flex-col items-center text-center pb-6 border-b border-white/[0.08]">
-                      <div className="w-28 h-28 rounded-full bg-gradient-to-br from-emerald-400 via-blue-500 to-purple-600 p-1 shadow-[0_0_30px_rgba(16,185,129,0.2)] mb-4">
-                        <div className="w-full h-full bg-slate-900 rounded-full flex items-center justify-center text-4xl font-black text-white tracking-tighter">
-                          {username ? username.substring(0, 2).toUpperCase() : 'PT'}
-                        </div>
-                      </div>
-                      <h2 className="text-2xl font-black text-white tracking-wide">{username || 'Guest Access'}</h2>
-                      <div className="inline-flex items-center space-x-2 mt-3 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{token ? 'Active Connection' : 'Offline'}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-6 space-y-4">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">User Identifier</span>
-                        <div className="bg-black/30 px-4 py-3 rounded-xl border border-white/[0.08] font-mono text-white text-sm">
-                          {username || 'Anonymous'}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Account Tier</span>
-                        <div className="bg-emerald-500/5 px-4 py-3 rounded-xl border border-emerald-500/20 font-mono text-emerald-400 text-sm font-bold flex items-center space-x-2">
-                          <span>Institutional Sandbox</span>
-                        </div>
-                      </div>
-                    </div>
+              <div className="max-w-7xl mx-auto space-y-8">
+                <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-wide">System <span className="text-emerald-400">Identity</span></h2>
+                    <p className="text-xs text-slate-400 font-mono mt-1">SECURE INSTITUTIONAL TELEMETRY & CLEARANCE</p>
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-mono text-emerald-400 font-bold">
+                    STATUS: OPTIMAL
                   </div>
                 </div>
-
-                {/* Right Col: Stats & Metrics Grid */}
-                <div className="lg:col-span-2 space-y-6">
+                
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="bg-[#121620]/40 backdrop-blur-[20px] border border-white/[0.08] shadow-[0_25px_45px_rgba(0,0,0,0.8)] p-6 rounded-3xl flex flex-col justify-between">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Total Trade Volume</span>
-                        <div className="text-3xl font-black font-mono text-white">$248,102.50</div>
-                      </div>
-                      <div className="mt-6">
-                        <div className="w-full bg-slate-800 rounded-full h-1.5">
-                           <div className="bg-emerald-500 h-1.5 rounded-full w-3/4 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+                  {/* Left Col: ID & Security */}
+                  <div className="space-y-6">
+                    <div className="bg-[#121620]/40 backdrop-blur-[20px] border border-white/[0.08] shadow-[0_25px_45px_rgba(0,0,0,0.8)] p-8 rounded-[2rem] relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                      
+                      <div className="flex flex-col items-center text-center pb-6 border-b border-white/[0.08]">
+                        <div className="w-28 h-28 rounded-full bg-gradient-to-br from-emerald-400 via-blue-500 to-purple-600 p-1 shadow-[0_0_30px_rgba(16,185,129,0.2)] mb-4">
+                          <div className="w-full h-full bg-slate-900 rounded-full flex items-center justify-center text-4xl font-black text-white tracking-tighter">
+                            {username ? username.substring(0, 2).toUpperCase() : 'PT'}
+                          </div>
                         </div>
-                        <span className="text-[10px] text-slate-400 mt-2 block uppercase tracking-widest">75% to Platinum Tier</span>
+                        <h2 className="text-2xl font-black text-white tracking-wide">{username || 'Guest Access'}</h2>
+                        <div className="inline-flex items-center space-x-2 mt-3 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{token ? 'Active Connection' : 'Offline'}</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="bg-[#121620]/40 backdrop-blur-[20px] border border-white/[0.08] shadow-[0_25px_45px_rgba(0,0,0,0.8)] p-6 rounded-3xl flex flex-col justify-between">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Execution Accuracy</span>
-                        <div className="text-3xl font-black font-mono text-white">99.98%</div>
-                      </div>
-                      <div className="mt-6">
-                        <div className="flex space-x-1">
-                          {[1,2,3,4,5,6,7,8,9,10].map(i => (
-                            <div key={i} className={`h-1.5 flex-1 rounded-full ${i === 10 ? 'bg-slate-700' : 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]'}`}></div>
-                          ))}
+                      <div className="pt-6 space-y-4">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">User Identifier</span>
+                          <div className="bg-black/30 px-4 py-3 rounded-xl border border-white/[0.08] font-mono text-white text-sm">
+                            {username || 'Anonymous'}
+                          </div>
                         </div>
-                        <span className="text-[10px] text-slate-400 mt-2 block uppercase tracking-widest">Optimal Latency Status</span>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Account Tier</span>
+                          <div className="bg-emerald-500/5 px-4 py-3 rounded-xl border border-emerald-500/20 font-mono text-emerald-400 text-sm font-bold flex items-center space-x-2">
+                            <span>Institutional Sandbox</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Security & API Panel */}
-                  <div className="bg-[#121620]/40 backdrop-blur-[20px] border border-white/[0.08] shadow-[0_25px_45px_rgba(0,0,0,0.8)] p-8 rounded-3xl space-y-6">
-                     <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
-                        <h3 className="text-xs font-black text-white uppercase tracking-widest">API Interface Credentials</h3>
-                        <button 
-                          onClick={() => playAudio('optimus_success.mp3')}
-                          className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-[10px] font-bold text-emerald-400 uppercase tracking-widest transition-all"
-                        >
-                          Generate New Key
-                        </button>
-                     </div>
-                     <div className="space-y-4">
-                       <div className="bg-black/40 p-4 rounded-xl border border-white/[0.08] flex items-center justify-between">
-                         <div>
-                           <div className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1">Production Key - Main</div>
-                           <div className="text-sm font-mono text-slate-500 select-none">pk_live_***************************8f92</div>
-                         </div>
-                         <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">ACTIVE</span>
-                       </div>
-                       <div className="bg-black/40 p-4 rounded-xl border border-white/[0.08] flex items-center justify-between">
-                         <div>
-                           <div className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1">Testing Key - Sandbox</div>
-                           <div className="text-sm font-mono text-slate-500 select-none">sk_test_***************************3a1b</div>
-                         </div>
-                         <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-500/20">SANDBOX</span>
-                       </div>
-                     </div>
-                  </div>
+                  {/* Right Col: Stats & Metrics Grid */}
+                  <div className="lg:col-span-2 space-y-6">
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="bg-[#121620]/40 backdrop-blur-[20px] border border-white/[0.08] shadow-[0_25px_45px_rgba(0,0,0,0.8)] p-6 rounded-3xl flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Total Trade Volume</span>
+                          <div className="text-3xl font-black font-mono text-white">$248,102.50</div>
+                        </div>
+                        <div className="mt-6">
+                          <div className="w-full bg-slate-800 rounded-full h-1.5">
+                             <div className="bg-emerald-500 h-1.5 rounded-full w-3/4 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+                          </div>
+                          <span className="text-[10px] text-slate-400 mt-2 block uppercase tracking-widest">75% to Platinum Tier</span>
+                        </div>
+                      </div>
 
+                      <div className="bg-[#121620]/40 backdrop-blur-[20px] border border-white/[0.08] shadow-[0_25px_45px_rgba(0,0,0,0.8)] p-6 rounded-3xl flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Execution Accuracy</span>
+                          <div className="text-3xl font-black font-mono text-white">99.98%</div>
+                        </div>
+                        <div className="mt-6">
+                          <div className="flex space-x-1">
+                            {[1,2,3,4,5,6,7,8,9,10].map(i => (
+                              <div key={i} className={`h-1.5 flex-1 rounded-full ${i === 10 ? 'bg-slate-700' : 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]'}`}></div>
+                            ))}
+                          </div>
+                          <span className="text-[10px] text-slate-400 mt-2 block uppercase tracking-widest">Optimal Latency Status</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Security & API Panel */}
+                    <div className="bg-[#121620]/40 backdrop-blur-[20px] border border-white/[0.08] shadow-[0_25px_45px_rgba(0,0,0,0.8)] p-8 rounded-3xl space-y-6">
+                       <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
+                          <h3 className="text-xs font-black text-white uppercase tracking-widest">API Interface Credentials</h3>
+                          <button 
+                            onClick={() => console.log('Generate Key Clicked')}
+                            className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-[10px] font-bold text-emerald-400 uppercase tracking-widest transition-all"
+                          >
+                            Generate New Key
+                          </button>
+                       </div>
+                       <div className="space-y-4">
+                         <div className="bg-black/40 p-4 rounded-xl border border-white/[0.08] flex items-center justify-between">
+                           <div>
+                             <div className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1">Production Key - Main</div>
+                             <div className="text-sm font-mono text-slate-500 select-none">pk_live_***************************8f92</div>
+                           </div>
+                           <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">ACTIVE</span>
+                         </div>
+                         <div className="bg-black/40 p-4 rounded-xl border border-white/[0.08] flex items-center justify-between">
+                           <div>
+                             <div className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1">Testing Key - Sandbox</div>
+                             <div className="text-sm font-mono text-slate-500 select-none">sk_test_***************************3a1b</div>
+                           </div>
+                           <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-500/20">SANDBOX</span>
+                         </div>
+                       </div>
+                    </div>
+
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         </div>
       )}

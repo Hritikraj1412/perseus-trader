@@ -14,9 +14,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import UserProfile, Portfolio, Transaction, Watchlist
 import yfinance as yf
 
-# --- NEW AUTHENTICATION FLOW ---
+# --- NEW AUTHENTICATION FLOW (OTP REMOVED) ---
 
-class RegisterStep1View(APIView):
+class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -27,78 +27,27 @@ class RegisterStep1View(APIView):
         if not username or not email or not password:
             return Response({'error': 'All fields are required'}, status=400)
 
+        # Check if username or email already exists
         if User.objects.filter(username=username).exists():
-            # If user exists but is inactive, allow them to request a new OTP
-            user = User.objects.get(username=username)
-            if user.is_active:
-                return Response({'error': 'Username already taken'}, status=400)
-            user.email = email
-            user.set_password(password)
-            user.save()
-        else:
-            # Create inactive user
-            user = User.objects.create_user(username=username, email=email, password=password)
-            user.is_active = False  # Lock account until OTP is verified
-            user.save()
+            return Response({'error': 'Username already taken'}, status=400)
+            
+        if User.objects.filter(email=email).exists():
+            return Response({'error': 'Email already registered'}, status=400)
 
-        # Generate 6-digit OTP
-        otp_code = str(random.randint(100000, 999999))
-        
+        # 1. Create Active User Directly
+        user = User.objects.create_user(username=username, email=email, password=password)
+        user.is_active = True  # Account is instantly active
+        user.save()
+
+        # 2. Create Profile with initial balance
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
-        user_profile.otp = otp_code
-        user_profile.otp_created_at = timezone.now()
         user_profile.balance = 10000.00 # Initial capital
         user_profile.save()
 
-        # Send Real OTP Email
-        send_mail(
-            subject='Perseus Trader - Registration OTP',
-            message=f'Welcome {user.username},\n\nYour registration verification code is: {otp_code}\n\nThis code expires in 5 minutes.',
-            from_email=None,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-
-        return Response({'message': 'OTP sent to your email.'})
-
-class RegisterStep2View(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password') # Passed from frontend to include in email
-        otp_input = request.data.get('otp')
-
-        try:
-            user = User.objects.get(username=username)
-            user_profile = UserProfile.objects.get(user=user)
-        except (User.DoesNotExist, UserProfile.DoesNotExist):
-            return Response({'error': 'User not found'}, status=404)
-
-        if not user_profile.otp or user_profile.otp != otp_input:
-            return Response({'error': 'Invalid OTP code'}, status=400)
-
-        if user_profile.otp_created_at and timezone.now() > user_profile.otp_created_at + timedelta(minutes=5):
-            return Response({'error': 'OTP has expired. Please register again.'}, status=400)
-
-        # Activate User
-        user.is_active = True
-        user.save()
-        
-        user_profile.otp = None
-        user_profile.save()
-
-        # Send Welcome Email with Credentials
-        send_mail(
-            subject='Perseus Trader - Account Created Successfully',
-            message=f'Congratulations {user.username}!\n\nYour institutional trading account has been fully verified and activated.\n\nYour Credentials:\nUsername: {user.username}\nPassword: {password}\n\nPlease keep these safe.',
-            from_email=None,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-
+        # 3. Generate tokens for instant login
         refresh = RefreshToken.for_user(user)
         return Response({
+            'message': 'Registration successful',
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'username': user.username
@@ -113,7 +62,7 @@ class SimpleLoginView(APIView):
 
         user = authenticate(username=username, password=password)
         if not user:
-            return Response({'error': 'Invalid credentials or unverified account'}, status=400)
+            return Response({'error': 'Invalid credentials'}, status=400)
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -121,6 +70,9 @@ class SimpleLoginView(APIView):
             'refresh': str(refresh),
             'username': user.username
         })
+
+# --- KEEP ALL YOUR OTHER VIEWS BELOW THIS EXACTLY THE SAME ---
+# (StockPriceView, StockHistoryView, TradeView, PortfolioView, etc.)
 
 # --- KEEP ALL YOUR OTHER VIEWS BELOW THIS EXACTLY THE SAME ---
 # (StockPriceView, StockHistoryView, TradeView, PortfolioView, etc.)

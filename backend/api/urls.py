@@ -1,7 +1,6 @@
 from django.urls import path
 from .views import (
-    RegisterStep1View,
-    RegisterStep2View,
+    RegisterView,          # <-- Purane views hata kar yeh naya naam daalei
     SimpleLoginView,
     StockPriceView, 
     StockHistoryView, 
@@ -12,11 +11,14 @@ from .views import (
 )
 
 urlpatterns = [
-    path('auth/register-step1/', RegisterStep1View.as_view(), name='register-step1'),
-    path('auth/register-step2/', RegisterStep2View.as_view(), name='register-step2'),
+    # Naya single-step registration path
+    path('auth/register/', RegisterView.as_view(), name='register'),
+    
+    # Login path
     path('auth/login/', SimpleLoginView.as_view(), name='login'),
     
-    path('stock/<str:symbol>/', StockPriceView.as_view(), name='stock-price'),
+    # Aapke baaki sabhi paths bilkul waise hi rahenge...
+    path('stock/<str:symbol>/price/', StockPriceView.as_view(), name='stock-price'),
     path('stock/<str:symbol>/history/', StockHistoryView.as_view(), name='stock-history'),
     path('trade/', TradeView.as_view(), name='trade'),
     path('portfolio/', PortfolioView.as_view(), name='portfolio'),
