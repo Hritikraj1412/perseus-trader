@@ -1,8 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.http import JsonResponse  # <-- Yeh line add karein
+from django.http import JsonResponse
 
-# Ek simple function jo root URL (/) par response dega
 def api_root(request):
     return JsonResponse({
         "status": "Optimal",
@@ -12,10 +11,8 @@ def api_root(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # Root URL (/) ke liye path
     path('', api_root, name='api_root'), 
     
-    # Aapke baaki API URLs yahan honge, jaise:
-    # path('api/', include('api.urls')),
+    # YEH LINE SABSE ZAROORI HAI - Yeh /api/ ko aapki api app se connect karegi
+    path('api/', include('api.urls')), 
 ]
