@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url  # <-- Render ke database ke liye zaroori
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,7 +11,7 @@ SECRET_KEY = 'django-insecure-perseus-trader-super-secret-key'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
@@ -33,6 +34,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # MUST be at the top for React to talk to Django
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # <-- Static files ke liye
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -73,6 +75,12 @@ DATABASES = {
     }
 }
 
+# --- RENDER DATABASE CONFIGURATION ---
+# Agar Render ka DATABASE_URL milega, toh ye automatically live database ko use karega
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    DATABASES['default'] = dj_database_url.parse(database_url)
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
@@ -89,6 +97,9 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- CORS SETTINGS FOR REACT ---
