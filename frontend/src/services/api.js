@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://perseus-trader.onrender.com',
+  baseURL: 'https://perseus-trader.onrender.com/api/',
 });
 
 // Automatically attach the authorization token to every request
